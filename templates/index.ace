@@ -1,0 +1,282 @@
+= doctype html
+html lang=en
+  head
+    meta charset=utf-8
+    title {{.Project.Name}}
+    link rel="stylesheet" href="https://unpkg.com/bulma/css/bulma.min.css"
+    link rel="stylesheet" href="https://unpkg.com/bulmaswatch/sandstone/bulmaswatch.min.css"
+    script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"
+    script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/later/1.2.0/later.min.js"
+    script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/prettycron/0.11.0/prettycron.min.js"
+    script src="https://unpkg.com/netlify-identity-widget@^1"
+    meta name="viewport" content="width=device-width, initial-scale=1"
+    = css
+      .netlify-identity-signup {
+        display: none;
+      }
+    = javascript
+      document.addEventListener("DOMContentLoaded", function(event) {
+        document.querySelectorAll('.cron').forEach(function(el) {
+          var cronString = ("" + el.innerHTML).trim()
+          el.innerHTML = "<abbr title=\"Next run: " + prettyCron.getNext(cronString,true) + "\">" + prettyCron.toString(cronString,true) + "</abbr>"
+        })
+      })
+
+      function updateNavigation() {
+        var name = location.hash.slice(1)
+        var items = document.getElementsByClassName('top-nav')
+        for (var i=0; i<items.length; i++) {
+          var item = items[i]
+          if (item.tagName === "LI") {
+            var navigationName = name.split("-")[0]
+            if (item.className.indexOf(navigationName) > -1) {
+              item.classList.add('is-active')
+            } else {
+              item.classList.remove('is-active')
+            }
+          } else {
+            if (name.indexOf(item.id) > -1) {
+              item.classList.remove('is-hidden')
+            } else {
+              item.classList.add('is-hidden')
+            }
+          }
+        }
+        var rowToScroll = document.getElementById(name)
+        if (name.indexOf("-") > -1 && rowToScroll) {
+          rowToScroll.scrollIntoView();
+        }
+      };
+
+      window.onpopstate = function() {
+        updateNavigation()
+      };
+
+      function show(name) {
+        if (history.pushState) {
+          history.pushState(null, null, '#'+name)
+        }
+        updateNavigation()
+      }
+  body
+    section.hero.is-primary.is-small
+      .hero-body
+        .container
+          h1.title {{.Project.Name}}
+          p.subtitle Policy, Procedure, and Audit Status
+      .hero-foot
+        nav.tabs.is-boxed.is-fullwidth
+          .container
+            ul.is-size-4
+              li.top-nav.overview
+                strong
+                  a onclick="javascript:show('overview')" Overview
+              li.top-nav.narratives
+                strong
+                  a onclick="javascript:show('narratives')" Narratives
+              li.top-nav.policies
+                strong
+                  a onclick="javascript:show('policies')" Policies
+              li.top-nav.procedures
+                strong
+                  a onclick="javascript:show('procedures')" Procedures
+              li.top-nav.standards
+                strong
+                  a onclick="javascript:show('standards')" Standards
+              / li.top-nav.evidence
+              /   a onclick="javascript:show('evidence')" Evidence Vault
+    #overview.section.top-nav.container.content
+      blockquote
+        h3 This site consolidates all documents related to the {{.Project.Name}}
+      hr
+      .columns.is-vcentered
+        .column.is-one-third
+          div
+            p.subtitle.is-3.has-text-centered Control Tracking
+        .column.has-text-centered
+          div
+            p.heading Satisfied Controls
+            p.title
+              {{.Stats.ControlsSatisfied}}
+        .column.has-text-centered
+          div
+            p.heading Total Controls
+            p.title
+              {{.Stats.ControlsTotal}}
+      .columns.is-vcentered
+        .column.is-one-third
+          div
+            p.subtitle.is-3.has-text-centered Procedure Tracking
+        .column.has-text-centered
+          div
+            p.heading Active Tickets
+            p.title
+              a target=_blank href="{{.Links.ProcedureOpen}}"
+                {{.Stats.ProcedureOpen}}
+        .column.has-text-centered
+          div
+            p.heading Oldest Ticket
+            p.title
+              a {{.Stats.ProcedureOldestDays}} days
+      .columns.is-vcentered
+        .column.is-one-third
+          div.has-text-centered
+            p.subtitle.is-3 Audit Tracking
+        .column.has-text-centered
+          div
+            p.heading Open Requests
+            p.title
+              a target=_blank href="{{.Links.AuditOpen}}"
+                {{.Stats.AuditOpen}}
+        .column.has-text-centered
+          div
+            p.heading Total Requests
+            p.title
+              a target=_blank href="{{.Links.AuditAll}}"
+                {{.Stats.AuditTotal}}
+      .columns.is-vcentered
+        .column.is-one-third
+        .column.is-two-thirds.has-text-centered
+          / progress.progress.is-primary value={{.Stats.AuditClosed}} max={{.Stats.AuditTotal}}
+    #narratives.section.top-nav.container.content
+      blockquote
+        h3
+          p
+            strong Narratives
+            | provide an overview of the organization and the compliance environment.
+      table.table.is-fullwidth.is-striped.is-hoverable.is-size-4
+        thead
+          tr
+            th Name
+            th Acronym
+            th TSC Satisfied
+            th PDF
+        tbody
+          {{range (index .Narratives) }}
+          tr id=narratives-{{.Acronym}}
+            td {{.Name}}
+            td {{.Acronym}}
+            td 
+              {{ range (index .Satisfies "TSC 2017") }}
+                code
+                  a href=javascript:show('standards-{{.}}') style="white-space: nowrap;"
+                    {{.}}
+                | 
+              {{end}}
+            td
+              a href=/documents/{{.OutputFilename}} target=_blank style="white-space: nowrap;"
+                {{.OutputFilename}}
+          {{end}}
+    #policies.section.top-nav.container.content
+      blockquote
+        h3
+          p
+            strong Policies
+            | govern the behavior of {{.Name}} employees and contractors.
+      table.table.is-fullwidth.is-striped.is-hoverable.is-size-4
+        thead
+          tr
+            th Name
+            th Acronym
+            th TSC Satisfied
+            th PDF
+        tbody
+          {{range .Policies }}
+          tr id=policies-{{.Acronym}}
+            td {{.Name}}
+            td {{.Acronym}}
+            td
+              {{ range (index .Satisfies "TSC 2017") }}
+                code
+                  a href=javascript:show('standards-{{.}}')
+                    {{.}}
+                | 
+              {{end}}
+            td 
+              a href=/documents/{{.OutputFilename}} target=_blank style="white-space: nowrap;"
+                {{.OutputFilename}}
+          {{end}}
+    #procedures.section.top-nav.container.content
+      blockquote
+        h3
+          p
+            strong Procedures
+            | prescribe specific steps that are taken in response to key events.
+      table.table.is-fullwidth.is-striped.is-hoverable.is-size-4
+        thead
+          tr
+            th Name
+            th ID
+            th Schedule (cron format)
+        tbody
+          {{range .Procedures }}
+          tr id=procedures-{{.ID}}
+            td {{.Name}}
+            td {{.ID}}
+            {{if .Cron}}
+            td.cron data-cron="{{.Cron}}" {{.Cron}}
+            {{else}}
+            td On demand
+            {{end}}
+          {{end}}
+    #standards.section.top-nav.container.content
+      blockquote
+        h3
+          p
+            strong Standards
+            | specify the controls satisfied by the compliance program.
+      table.table.is-fullwidth.is-striped.is-hoverable.is-size-4
+        thead
+          tr
+            th style="white-space: nowrap;" Control Key
+            th style="white-space: nowrap;" Name
+            th style="white-space: nowrap;" Satisfied?
+            th style="white-space: nowrap;" Satisfied By
+        tbody
+          {{range .Controls }}
+          tr id=standards-{{.ControlKey}}
+            td {{.ControlKey}}
+            td
+              strong {{.Name}}
+              .subtitle {{.Description}}
+            {{if .Satisfied}}
+            td.is-success Yes
+            {{else}}
+            td No
+            {{end}}
+            td
+              {{range .SatisfiedBy}}
+              a.is-size-7 href=/documents/{{.}} target=_blank style="white-space: nowrap;"
+                {{.}}
+              {{end}}
+          {{end}}
+
+    footer.footer
+      .container
+        .has-text-centered.content
+          p {{.Project.OrganizationName}} Confidential 2019
+          p data-last-edit-date=
+        .has-text-centered data-netlify-identity-menu=""
+  = javascript
+    if (window.location.hash == "") {
+      show('overview')
+    } else {
+      var hashComponents = window.location.hash.split('#')
+      if (hashComponents.length>1) {
+        var destination = hashComponents[1]
+        if (["overview","narratives","policies","procedures","standards"].indexOf(destination.split("-")[0]) >= 0) {
+          show(destination)
+        }
+      }
+    }
+    if (netlifyIdentity) {
+      netlifyIdentity.on("init", () => {
+        netlifyIdentity.on("logout", () => {
+          document.location.href = "/login"
+        })
+      })
+      netlifyIdentity.init({
+        logo: false
+      });
+    }
+    
